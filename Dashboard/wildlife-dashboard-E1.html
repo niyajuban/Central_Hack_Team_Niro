@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildlife Protection - Elephant E1 Ganesha</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+        
+        :root {
+            --bg-primary: #0a0f0d;
+            --bg-secondary: #141b17;
+            --bg-panel: #1a2420;
+            --accent-forest: #2d5a3f;
+            --accent-warning: #d97706;
+            --accent-danger: #dc2626;
+            --accent-safe: #10b981;
+            --text-primary: #e8f0ed;
+            --text-secondary: #9ca3af;
+            --border-color: #2d5a3f33;
+            --glow-green: rgba(16, 185, 129, 0.3);
+            --glow-red: rgba(220, 38, 38, 0.3);
+            --glow-orange: rgba(217, 119, 6, 0.3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: -1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-forest) 100%);
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid var(--accent-forest);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .back-btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--accent-forest);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: var(--accent-forest);
+            transform: translateX(-3px);
+        }
+        
+        .header h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .header-right {
+            text-align: right;
+        }
+        
+        .animal-id {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        
+        .last-update {
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            background: var(--bg-panel);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+        
+        .panel:nth-child(1) { animation-delay: 0.1s; }
+        .panel:nth-child(2) { animation-delay: 0.2s; }
+        .panel:nth-child(3) { animation-delay: 0.3s; }
+        .panel:nth-child(4) { animation-delay: 0.4s; }
+        
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-forest), transparent);
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .panel-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        
+        /* ALERT PANEL - Changes color based on threat level */
+        .alert-panel {
+            grid-column: 1 / -1;
+            border-width: 3px;
+            transition: all 0.5s ease;
+        }
+        
+        .alert-panel.threat-normal {
+            border-color: var(--accent-safe);
+            background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(16, 185, 129, 0.05) 100%);
+            box-shadow: 0 8px 32px var(--glow-green);
+        }
+        
+        .alert-panel.threat-elevated {
+            border-color: var(--accent-warning);
+            background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(217, 119, 6, 0.05) 100%);
+            box-shadow: 0 8px 32px var(--glow-orange);
+        }
+        
+        .alert-panel.threat-critical {
+            border-color: var(--accent-danger);
+            background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(220, 38, 38, 0.05) 100%);
+            box-shadow: 0 8px 32px var(--glow-red);
+            animation: alertPulse 2s infinite;
+        }
+        
+        @keyframes alertPulse {
+            0%, 100% { 
+                box-shadow: 0 8px 32px var(--glow-red);
+            }
+            50% { 
+                box-shadow: 0 8px 48px rgba(220, 38, 38, 0.6);
+            }
+        }
+        
+        .threat-indicator {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 2px solid var(--accent-safe);
+        }
+        
+        .threat-indicator.elevated {
+            border-color: var(--accent-warning);
+        }
+        
+        .threat-indicator.critical {
+            border-color: var(--accent-danger);
+        }
+        
+        .threat-level {
+            flex: 1;
+        }
+        
+        .threat-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .threat-badge.normal {
+            background: var(--accent-safe);
+            color: var(--bg-primary);
+        }
+        
+        .threat-badge.elevated {
+            background: var(--accent-warning);
+            color: var(--bg-primary);
+        }
+        
+        .threat-badge.critical {
+            background: var(--accent-danger);
+            color: white;
+        }
+        
+        .threat-scale {
+            flex: 2;
+        }
+        
+        .scale-bar {
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(90deg, 
+                var(--accent-safe) 0%, 
+                var(--accent-safe) 33%, 
+                var(--accent-warning) 33%, 
+                var(--accent-warning) 66%, 
+                var(--accent-danger) 66%, 
+                var(--accent-danger) 100%
+            );
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scale-indicator {
+            position: absolute;
+            top: -5px;
+            width: 8px;
+            height: 50px;
+            background: white;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            transition: left 0.5s ease;
+        }
+        
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .threat-status {
+            text-align: right;
+        }
+        
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        
+        .status-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .status-btn.active {
+            background: var(--accent-warning);
+            color: var(--bg-primary);
+        }
+        
+        .status-btn.resolved {
+            background: var(--accent-safe);
+            color: var(--bg-primary);
+        }
+        
+        .status-btn:not(.active):not(.resolved) {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+        
+        /* Sensor Data Grid */
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .sensor-card {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-safe);
+        }
+        
+        .sensor-card.warning {
+            border-left-color: var(--accent-warning);
+        }
+        
+        .sensor-card.danger {
+            border-left-color: var(--accent-danger);
+        }
+        
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .sensor-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .sensor-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        
+        .sensor-status.normal {
+            background: var(--accent-safe);
+            color: var(--bg-primary);
+        }
+        
+        .sensor-status.abnormal {
+            background: var(--accent-danger);
+            color: white;
+        }
+        
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: 'Crimson Pro', serif;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sensor-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+        
+        .sensor-baseline {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .sensor-trend {
+            display: inline-block;
+            margin-left: 0.5rem;
+            color: var(--accent-safe);
+            font-weight: 700;
+        }
+        
+        .ml-insights {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--accent-safe);
+        }
+        
+        .ml-insights-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--accent-safe);
+        }
+        
+        /* Camera Detection */
+        .camera-detection {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .detection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .detection-status {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .detection-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .detection-icon.safe {
+            background: var(--accent-safe);
+        }
+        
+        .detection-icon.danger {
+            background: var(--accent-danger);
+        }
+        
+        .detection-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        /* Battery Status Panel */
+        .battery-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .battery-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-safe);
+        }
+        
+        .battery-item.low {
+            border-left-color: var(--accent-warning);
+        }
+        
+        .battery-item.critical {
+            border-left-color: var(--accent-danger);
+        }
+        
+        .battery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .battery-name {
+            font-weight: 600;
+        }
+        
+        .battery-percentage {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Crimson Pro', serif;
+        }
+        
+        .battery-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-safe), var(--accent-forest));
+            transition: width 0.5s ease;
+        }
+        
+        .battery-fill.low {
+            background: linear-gradient(90deg, var(--accent-warning), #f59e0b);
+        }
+        
+        .battery-fill.critical {
+            background: linear-gradient(90deg, var(--accent-danger), #ef4444);
+        }
+        
+        .battery-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        /* GPS Map */
+        #animalMap {
+            width: 100%;
+            height: 350px;
+            border-radius: 8px;
+            border: 2px solid var(--accent-forest);
+        }
+        
+        .trail-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .trail-stat {
+            background: var(--bg-secondary);
+            padding: 0.75rem;
+            border-radius: 6px;
+        }
+        
+        .trail-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .trail-value {
+            font-weight: 700;
+            margin-top: 0.25rem;
+            font-size: 1rem;
+        }
+        
+        /* Camera Feed */
+        .camera-container {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--accent-forest);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .camera-status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-safe);
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .camera-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.location.href='wildlife-dashboard-overview.html'">
+                ← Back to Overview
+            </button>
+            <h1>🐘 Elephant E1 - Ganesha</h1>
+        </div>
+        <div class="header-right">
+            <div class="animal-id">Animal ID: E1-GANESHA-2024</div>
+            <div class="last-update">Last Update: <span id="lastUpdate">Just now</span></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ALERT PANEL with Threat Level -->
+        <div class="panel alert-panel threat-normal">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">✅ Threat Assessment & Alert Status</h2>
+                    <p class="panel-subtitle">Real-time anomaly detection & ML analysis</p>
+                </div>
+            </div>
+
+            <div class="threat-indicator">
+                <div class="threat-level">
+                    <div class="threat-badge normal">✓ ALL NORMAL</div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                        All systems nominal - no threats detected
+                    </div>
+                </div>
+                
+                <div class="threat-scale">
+                    <div style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                        COMBINED THREAT LEVEL
+                    </div>
+                    <div class="scale-bar">
+                        <div class="scale-indicator" style="left: 8%;"></div>
+                    </div>
+                    <div class="scale-labels">
+                        <span>0 - Normal</span>
+                        <span>50 - Elevated</span>
+                        <span>100 - Critical</span>
+                    </div>
+                </div>
+
+                <div class="threat-status">
+                    <div class="status-text" style="color: var(--accent-safe);">
+                        Status: NO THREAT
+                    </div>
+                    <div class="status-actions">
+                        <button class="status-btn">ACTIVE THREAT</button>
+                        <button class="status-btn">WORKING ON IT</button>
+                        <button class="status-btn resolved">RESOLVED</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sensor Data from Collar -->
+            <div class="sensor-grid">
+                <div class="sensor-card">
+                    <div class="sensor-header">
+                        <span class="sensor-name">❤️ Heart Rate</span>
+                        <span class="sensor-status normal">NORMAL</span>
+                    </div>
+                    <div class="sensor-value">
+                        76<span class="sensor-unit">bpm</span>
+                    </div>
+                    <div class="sensor-baseline">
+                        Baseline: 70-78 bpm
+                        <span class="sensor-trend">✓ Stable</span>
+                    </div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-header">
+                        <span class="sensor-name">📊 Accelerometer</span>
+                        <span class="sensor-status normal">NORMAL</span>
+                    </div>
+                    <div class="sensor-value">
+                        0.3<span class="sensor-unit">G</span>
+                    </div>
+                    <div class="sensor-baseline">
+                        Normal: 0.2-0.5G
+                        <span class="sensor-trend">✓ Normal</span>
+                    </div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-header">
+                        <span class="sensor-name">🌡️ Temperature</span>
+                        <span class="sensor-status normal">NORMAL</span>
+                    </div>
+                    <div class="sensor-value">
+                        36.8<span class="sensor-unit">°C</span>
+                    </div>
+                    <div class="sensor-baseline">
+                        Normal range: 36.0-38.0°C
+                    </div>
+                </div>
+
+                <div class="sensor-card">
+                    <div class="sensor-header">
+                        <span class="sensor-name">🎤 Audio Analysis</span>
+                        <span class="sensor-status normal">NORMAL</span>
+                    </div>
+                    <div class="sensor-value">
+                        42<span class="sensor-unit">dB</span>
+                    </div>
+                    <div class="sensor-baseline">
+                        No gunshots or distress calls detected
+                    </div>
+                </div>
+            </div>
+
+            <div class="ml-insights">
+                <div class="ml-insights-title">🤖 ML MODEL ANALYSIS</div>
+                <div>
+                    <strong>Status:</strong> All vitals within normal parameters. 
+                    Model confidence: 98%. 
+                    <br><br>
+                    <strong>Behavioral Pattern:</strong> Ganesha is exhibiting typical foraging behavior. Movement patterns consistent with daytime grazing activity in familiar territory. No anomalies detected in 24-hour window.
+                    <br><br>
+                    <strong>Recommendation:</strong> Continue routine monitoring. No immediate action required.
+                </div>
+            </div>
+
+            <!-- Camera Detection Status -->
+            <div class="camera-detection">
+                <div class="detection-header">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">
+                            CHECKPOST CAMERA DETECTION
+                        </div>
+                        <div class="detection-status" style="color: var(--accent-safe);">
+                            ✓ No Trespassers Detected
+                        </div>
+                    </div>
+                    <div class="detection-icon safe">
+                        📹
+                    </div>
+                </div>
+                <div class="detection-details">
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">LAST SCAN</div>
+                        <div style="font-weight: 700; margin-top: 0.25rem;">2 seconds ago</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">HUMANS DETECTED</div>
+                        <div style="font-weight: 700; margin-top: 0.25rem;">0 in last 30 min</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">CONFIDENCE SCORE</div>
+                        <div style="font-weight: 700; margin-top: 0.25rem;">99.1%</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">DISTANCE TO GANESHA</div>
+                        <div style="font-weight: 700; margin-top: 0.25rem;">~850m</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battery Status Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">🔋 Device Battery Status</h2>
+                    <p class="panel-subtitle">Power levels & charge estimates</p>
+                </div>
+            </div>
+            <div class="battery-grid">
+                <div class="battery-item">
+                    <div class="battery-header">
+                        <span class="battery-name">Collar E1 - Ganesha</span>
+                        <span class="battery-percentage" style="color: var(--accent-safe);">87%</span>
+                    </div>
+                    <div class="battery-bar">
+                        <div class="battery-fill" style="width: 87%;"></div>
+                    </div>
+                    <div class="battery-info">
+                        <span>⏱ ~12 days remaining</span>
+                        <span>Last charged: 10 days ago</span>
+                    </div>
+                </div>
+
+                <div class="battery-item">
+                    <div class="battery-header">
+                        <span class="battery-name">Checkpost Camera</span>
+                        <span class="battery-percentage" style="color: var(--accent-safe);">94%</span>
+                    </div>
+                    <div class="battery-bar">
+                        <div class="battery-fill" style="width: 94%;"></div>
+                    </div>
+                    <div class="battery-info">
+                        <span>🔌 Solar charging active</span>
+                        <span>Stable power</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPS Tracking Map -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">📍 Live GPS Tracking</h2>
+                    <p class="panel-subtitle">Real-time location & movement trail</p>
+                </div>
+            </div>
+            <div id="animalMap"></div>
+            <div class="trail-info">
+                <div class="trail-stat">
+                    <div class="trail-label">Current Location</div>
+                    <div class="trail-value">26.45°N, 93.17°E</div>
+                </div>
+                <div class="trail-stat">
+                    <div class="trail-label">Distance Moved (24h)</div>
+                    <div class="trail-value">2.8 km</div>
+                </div>
+                <div class="trail-stat">
+                    <div class="trail-label">Speed</div>
+                    <div class="trail-value">0.2 km/h</div>
+                </div>
+                <div class="trail-stat">
+                    <div class="trail-label">Last Movement</div>
+                    <div class="trail-value">1 minute ago</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Camera Feed -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">📹 Live Camera Feed</h2>
+                    <p class="panel-subtitle">Checkpost surveillance</p>
+                </div>
+            </div>
+            <div class="camera-container">
+                <div class="camera-status-badge">
+                    <span class="status-dot"></span>
+                    <span>LIVE</span>
+                </div>
+                <div class="camera-placeholder">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📹</div>
+                    <div style="font-size: 1rem;">North Checkpost - Active</div>
+                    <div style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-secondary);">
+                        1080p @ 30fps | Night Vision: ON
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map for individual animal
+        const animalMap = L.map('animalMap').setView([26.45, 93.17], 14);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(animalMap);
+
+        // Animal current position
+        const ganeshaIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 4px solid #0a0f0d; box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);"></div>',
+            iconSize: [24, 24]
+        });
+
+        const ganeshaMarker = L.marker([26.45, 93.17], {icon: ganeshaIcon})
+            .bindPopup('<b>Ganesha - Current Position</b><br>Status: Normal<br>HR: 76 bpm')
+            .addTo(animalMap);
+
+        // Movement trail (last 6 hours)
+        const trail = [
+            [26.448, 93.168],
+            [26.449, 93.169],
+            [26.4495, 93.171],
+            [26.45, 93.17]
+        ];
+
+        L.polyline(trail, {
+            color: '#10b981',
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '10, 5'
+        }).addTo(animalMap);
+
+        // Checkpost marker
+        const checkpostIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #3b82f6; width: 20px; height: 20px; border-radius: 4px; border: 3px solid #0a0f0d;"></div>',
+            iconSize: [20, 20]
+        });
+
+        L.marker([26.455, 93.175], {icon: checkpostIcon})
+            .bindPopup('<b>North Checkpost</b><br>Camera: Active')
+            .addTo(animalMap);
+
+        // Update last update time
+        function updateTime() {
+            const now = new Date();
+            const seconds = Math.floor((now - new Date(now.setSeconds(0))) / 1000);
+            document.getElementById('lastUpdate').textContent = seconds === 0 ? 'Just now' : `${seconds} seconds ago`;
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Simulate status button clicks
+        document.querySelectorAll('.status-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.status-btn').forEach(b => {
+                    b.classList.remove('active', 'resolved');
+                });
+                
+                if (this.textContent.includes('ACTIVE')) {
+                    this.classList.add('active');
+                } else if (this.textContent.includes('RESOLVED')) {
+                    this.classList.add('resolved');
+                } else {
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Real-time data simulation
+        setInterval(() => {
+            console.log('Fetching real-time sensor data...');
+        }, 5000);
+    </script>
+</body>
+</html>
